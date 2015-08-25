@@ -1,0 +1,16 @@
+public class TimeClock {
+    private int t = 0;
+    private boolean stop = false;
+    public void setTime(int t){this.t = t;}//設定時間
+    public String getTime(){return this.t/1000 + "";}//取得時間字串
+    public int getTimes(){return t;}
+    public boolean isStop(){return this.stop;}//確認是否停止
+    public void Stop(){this.stop = true;}//停止
+    public void Start(){this.stop = false;}//開始
+    public void toDown(){      
+        if (this.stop) return;
+        if (t > 0){
+            t -=1000;
+        }else this.stop = true;
+    }
+}

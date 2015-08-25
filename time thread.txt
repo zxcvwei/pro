@@ -1,0 +1,23 @@
+public class TimeThread_Applet implements java.lang.Runnable{
+    private HitMouse_Applet hit = null;
+    private TimeClock tc = null;  
+    public void setStop(){this.tc.Stop();}
+    public void setStart(){this.tc.Start();}
+    public void setTime(int s){this.tc.setTime(s);}
+    public int getTime(){return this.tc.getTimes();}
+    public void init(HitMouse_Applet hit){
+        this.hit = hit;
+        tc = new TimeClock();
+    }   
+    public void run() {
+        while (this.tc.isStop() == false){
+            this.hit.CreateRandom(this.tc.getTime());
+            this.tc.toDown();
+            this.hit.setTime(this.tc.getTime());
+            try {Thread.sleep(1000);}
+            catch (InterruptedException ex) {System.out.println(ex.getMessage());}                  
+            this.hit.ClearIcon();                                
+         }
+        hit.GameOver();
+    }
+}

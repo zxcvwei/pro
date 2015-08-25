@@ -1,0 +1,207 @@
+import java.applet.AudioClip;
+import java.awt.event.*;
+import javax.swing.*;
+import java.awt.*;
+@SuppressWarnings("serial")
+public class HitMouse_Applet extends JApplet implements ActionListener,MouseListener{
+
+    private Cursor cusRemondRelease;//自訂滑鼠圖案放開時
+    private Cursor cusRemondPress;//自訂滑鼠圖案按下時
+    Image RemondImgRelease = new ImageIcon(getClass().getResource("picture/hammer.png")).getImage();
+    Image RemondImgPress = new ImageIcon(getClass().getResource("picture/hammerDown.png")).getImage();
+    private JPanel jpNorth = new JPanel(new FlowLayout());
+    private JPanel jpCenter = new JPanel();
+    private JPanel jpSouth = new JPanel(new FlowLayout());
+    private JButton jbStart = new JButton();
+    private JButton jbQuestion = new JButton();
+    private JButton jbGame[];//配置按鈕
+    private JComboBox<String> comMap = new JComboBox<String>();
+    private JLabel jlTime = new JLabel("剩餘時間：30秒");//時間倒數
+    private JLabel jlScore = new JLabel();//分數
+    private int iLattice = 5;//Width & Height
+    private int iTime = 30*1000;//30秒
+    private ImageIcon iConMouse = new ImageIcon(getClass().getResource("picture/Mouse.png"));//Mouse圖片
+    private ImageIcon iConBomb = new ImageIcon(getClass().getResource("picture/Bomb.png"));//Bomb圖片
+    private ImageIcon iConTime = new ImageIcon(getClass().getResource("picture/time.png"));//Bomb圖片
+    private ImageIcon iConBombing = new ImageIcon(getClass().getResource("picture/Bombing.jpg"));//Bombing圖片
+    private ImageIcon iConWin = new ImageIcon(getClass().getResource("picture/Winner.jpg"));
+    private ImageIcon iConGood = new ImageIcon(getClass().getResource("picture/GoodJob.jpg"));
+    private ImageIcon iConText = new ImageIcon(getClass().getResource("picture/Answer.png"));
+    private TimeThread_Applet timethread = null;
+    private int iScore = 0;//分數
+    private Color c;//預設按鈕顏色
+    private AudioClip bombAudio,hitAudio,backAudio,timeAudio;
+    public void init(){
+        Toolkit toolkit = Toolkit.getDefaultToolkit();
+        Dimension screenSize = toolkit.getScreenSize();
+        int screenHeight = (int) screenSize.getHeight();// 解析度長
+        int screenWidth = (int) screenSize.getWidth();// 解析度寬        
+        this.getContentPane().setBackground(Color.CYAN);
+        this.setSize(800,450);
+        this.setLocation(screenWidth / 2 - this.getWidth() / 2, screenHeight / 2 - this.getHeight() / 2);// 設定Frame置中               
+        cusRemondRelease = this.getToolkit().createCustomCursor(RemondImgRelease, new Point(16,16), "Tand");//自訂滑鼠圖案
+        this.setCursor(cusRemondRelease);
+        getjpNorth();
+        getjpCenter();
+        getjpSouth();
+        this.add(jpNorth,BorderLayout.NORTH);  
+        this.add(jpCenter,BorderLayout.CENTER);
+        this.add(jpSouth,BorderLayout.SOUTH);  
+        bombAudio = getAudioClip(getCodeBase(), "audio/bomb.wav"); 
+        hitAudio = getAudioClip(getCodeBase(), "audio/hit.wav"); 
+        backAudio = getAudioClip(getCodeBase(), "audio/back.mid"); 
+        timeAudio = getAudioClip(getCodeBase(), "audio/time.wav"); 
+        this.setVisible(true);
+    }
+     private void getjpNorth() {
+        jbStart.addActionListener(this);
+        jbStart.setPreferredSize(new java.awt.Dimension(32, 32));
+        jbStart.setIcon(new ImageIcon(getClass().getResource("picture/start.png")));
+        jbQuestion.addActionListener(this);
+        jbQuestion.setPreferredSize(new java.awt.Dimension(32, 32));
+        jbQuestion.setIcon(new ImageIcon(getClass().getResource("picture/Question.png")));
+        DefaultComboBoxModel<String> com = new DefaultComboBoxModel<String>();
+        com.addElement("地圖一");
+        com.addElement("地圖二");
+        com.addElement("地圖三");
+        comMap.setModel(com);
+        comMap.addActionListener(this);
+        jpNorth.add(comMap);     
+        jpNorth.add(jbStart);
+        jpNorth.add(jbQuestion);
+    }
+    private void getjpCenter() {               
+        ButtonInit();      
+    }
+    private void ButtonInit() {
+        jpCenter.removeAll();
+        if (comMap.getSelectedIndex() == 0){
+            iLattice = 5;
+            c =Color.BLUE;
+        }else if (comMap.getSelectedIndex() == 1){
+            iLattice = 6;
+            c =Color.YELLOW;
+        }else if (comMap.getSelectedIndex() == 2){
+            iLattice = 7;
+            c =Color.WHITE;
+        }
+        jbGame = new JButton[iLattice*iLattice];
+        jpCenter.setLayout(new GridLayout(iLattice,iLattice));
+          for (int i = 0; i < iLattice*iLattice; i++) {
+            jbGame[i] = new JButton();
+            jbGame[i].setBackground(c); 
+            jbGame[i].addMouseListener(this);
+            jpCenter.add(jbGame[i]);
+        }
+          this.validate();
+    }
+    private void Check(JButton jb) {      
+        for (int i = 0; i < jbGame.length; i++) {
+            if (jb == jbGame[i]){
+                int nowTime = getTimeThread().getTime();
+                if (jb.getIcon() == iConMouse) {
+                    hitAudio.play();
+                    jbGame[i].setIcon(null);
+                    jbGame[i].setText("Hit"); 
+                    jbGame[i].setBackground(Color.red);
+                    iScore += 10;
+                }else if (jb.getIcon() == iConBomb){
+                    bombAudio.play();
+                    getTimeThread().setTime(nowTime - 4000);//打到炸彈-4秒
+                    jbGame[i].setIcon(iConBombing);
+                    iScore -= 20;
+                }else if (jb.getIcon() == iConTime){
+                    timeAudio.play();
+                    int addTime = (int)(Math.random()*3);
+                    getTimeThread().setTime(nowTime + addTime*1000);//打到時鐘+0~2秒
+                    jbGame[i].setIcon(null);
+                    jbGame[i].setText("Time + " + addTime); 
+                    jbGame[i].setBackground(Color.MAGENTA);
+                }
+                jlScore.setText("目前分數：" + (iScore));
+            }        
+        }
+    }
+    private void getjpSouth() {
+        jpSouth.add(jlTime);
+        jpSouth.add(jlScore);
+    }    
+    private void Start() {
+        iScore = 0;
+        jlScore.setText("目前分數：" + iScore);
+        getTimeThread().setTime(iTime);
+        getTimeThread().setStart();
+        jbStart.setEnabled(false);
+        comMap.setEnabled(false);
+        Thread t = new Thread(getTimeThread());
+        t.start();   
+        backAudio.loop();
+    }
+     public void actionPerformed(ActionEvent e) {
+        if (e.getSource() == jbStart) Start();
+        else if (e.getSource() == comMap) ButtonInit();
+        else if (e.getSource() == jbQuestion) Answer();
+    }
+    private TimeThread_Applet getTimeThread() {
+        if (timethread == null) {
+            timethread = new TimeThread_Applet();
+            timethread.init(this);
+        }
+        return timethread;
+    }//由TimeThread.java觸發
+    public void setTime(String s){jlTime.setText("剩餘時間：" + s + "秒");}
+    public void CreateRandom(String s){//由TimeThread.java觸發 
+        int mouseElements = Math.abs(Integer.valueOf(s)%4);//產生0~3個目標物    
+        int bombElements = Math.abs(Integer.valueOf(s)%7);//產生0~7個炸彈
+        int timeElements = Math.abs((Integer.valueOf(s)%2));//產生0~1個時鐘
+        int r;
+        for (int i = 0; i < timeElements; i++) {//產生亂數
+            r = (int) (Math.random()*iLattice*iLattice);       
+            this.jbGame[r].setIcon(iConTime);//亂數產生Mouse圖片
+        }
+        for (int i = 0; i < mouseElements; i++) {//產生亂數
+            r = (int) (Math.random()*iLattice*iLattice);       
+            this.jbGame[r].setIcon(iConMouse);//亂數產生Mouse圖片
+        }
+        for (int i = 0; i < bombElements; i++) {
+            r = (int) (Math.random()*iLattice*iLattice);
+            this.jbGame[r].setIcon(iConBomb); //亂數產生Bomb圖片
+        }
+    }
+    public void ClearIcon(){//由TimeThread.java觸發 
+        for (int i = 0; i < iLattice*iLattice; i++) {
+            this.jbGame[i].setIcon(null);//清除圖片
+            this.jbGame[i].setText("");          
+            this.jbGame[i].setBackground(c);
+        }
+    }
+    public void GameOver(){//由TimeThread.java觸發 
+        jbStart.setEnabled(true);
+        comMap.setEnabled(true);
+        if (iScore >= 500)
+        JOptionPane.showMessageDialog(this, "你所得分數為：" + iScore + "\n非常厲害","得分",JOptionPane.INFORMATION_MESSAGE,iConWin);        
+        else if (iScore >=300 && iScore < 500) 
+        JOptionPane.showMessageDialog(this, "你所得分數為：" + iScore + "\n很有前途，再接再厲","得分",JOptionPane.INFORMATION_MESSAGE,iConGood);
+        else if (iScore < 300) 
+        JOptionPane.showMessageDialog(this, "你所得分數為：" + iScore + "\n要多加油囉!!!","得分",JOptionPane.INFORMATION_MESSAGE,iConBombing);        
+        backAudio.stop();
+    }    
+    private void Answer(){
+         JOptionPane.showMessageDialog(this, "", "說明", JOptionPane.INFORMATION_MESSAGE, iConText);
+    }
+    public void mouseClicked(MouseEvent e) {}
+    public void mousePressed(MouseEvent e) {
+        cusRemondPress = this.getToolkit().createCustomCursor(RemondImgPress, new Point(16,16), "Tand");//自訂滑鼠圖案
+        this.setCursor(cusRemondPress);  
+        JButton jb = (JButton) e.getSource();
+        Check(jb);   
+    }
+    public void mouseReleased(MouseEvent e) {
+        cusRemondRelease = this.getToolkit().createCustomCursor(RemondImgRelease, new Point(16,16), "Tand");//自訂滑鼠圖案
+        this.setCursor(cusRemondRelease);
+    }
+    public void mouseEntered(MouseEvent e) {}
+    public void mouseExited(MouseEvent e) {}       
+  
+}
+
